@@ -106,7 +106,7 @@ class ESLRankings(CSRankingsClient):
         if page_source:
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.select("div[class*=RankingsTeamItem__Row-]")
-            if len(teams) == 0:
+            if len(teams) == 0 and not explicit_wait:
                 return self.get_ranking(explicit_wait=True)
             rank, points, teamname = [], [], []
             for team in teams:
