@@ -3,7 +3,6 @@ import abc
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
 
 
 class CSRankingsClient(abc.ABC):
@@ -15,8 +14,7 @@ class CSRankingsClient(abc.ABC):
     @staticmethod
     def _get_default_options():
         options = Options()
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1280x720")
+        options.add_argument("--disable-search-engine-choice-screen")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -25,12 +23,14 @@ class CSRankingsClient(abc.ABC):
         options.headless = False
         return options
 
-    def _get_page_source(self, url, nr_retries=1):
+    def _get_page_source(self, url, nr_retries=1, explicit_wait=True):
         try:
             self.driver.get(url)
-            WebDriverWait(self.driver, 10)
-            import time  #TODO test if this is really needed for ESL pulls..
-            time.sleep(10)
+            if explicit_wait:
+                import time
+                time.sleep(3)
+            else:
+                self.driver.implicitly_wait(10)
             return self.driver.page_source
         except Exception as e:
             print(f"Error occurred while fetching URL: {url}")
@@ -99,14 +99,15 @@ class ESLRankings(CSRankingsClient):
         super().__init__()
         self.ranking_url = "https://pro.eslgaming.com/worldranking/csgo/rankings/"
 
-    def get_ranking(self):
+    def get_ranking(self, explicit_wait=False):
         ranking = []
-        page_source = self._get_page_source(self.ranking_url)
+        page_source = self._get_page_source(self.ranking_url, explicit_wait=explicit_wait)
 
         if page_source:
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.select("div[class*=RankingsTeamItem__Row-]")
-
+            if len(teams) == 0:
+                return self.get_ranking(explicit_wait=True)
             rank, points, teamname = [], [], []
             for team in teams:
                 try:  # First pull all numbers; in case of no error, add them all to the running lists
@@ -120,5 +121,5 @@ class ESLRankings(CSRankingsClient):
                     print('Not succeeded: ', team, e)
             ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i]} for i in range(len(points))]  # TODO: refactor, but first try to see if it works
 
-        self.close()  # TODO experiment with moving in get_page_source
+        self.close()
         return ranking
