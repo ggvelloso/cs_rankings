@@ -99,9 +99,10 @@ class ValveLiveRankings(HLTVRankings):
 
 class ESLRankings(CSRankingsClient):
 
-    def __init__(self):
+    def __init__(self, round_half_down=True):
         super().__init__()
         self.ranking_url = "https://pro.eslgaming.com/worldranking/csgo/rankings/"
+        self.round_half_down = round_half_down  # For the lowest ranked teams, if True, report 0 points; if not, "<0.5"
 
     def get_ranking(self, explicit_wait=False):
         ranking = []
@@ -112,18 +113,28 @@ class ESLRankings(CSRankingsClient):
             teams = soup.select("div[class*=RankingsTeamItem__Row-]")
             if len(teams) == 0 and not explicit_wait:
                 return self.get_ranking(explicit_wait=True)
-            rank, points, teamname = [], [], []
+            rank, points, teamname, players = [], [], [], []
             for team in teams:
                 try:  # First pull all numbers; in case of no error, add them all to the running lists
-                    this_pt = int(team.select('div[class*=Points]')[0].find("span").next.strip())
+                    try:
+                        this_pt = int(team.select('div[class*=Points]')[0].find("span").next.strip())
+                    except TypeError:
+                        if self.round_half_down:
+                            this_pt = 0
+                        else:
+                            this_pt = team.select('div[class*=Points]')[0].find("span").text.split()[0]
                     this_name = str(team.select('div[class*=TeamName]')[0].select('a[class]')[0].next)
                     this_rank = int(team.select('span[class*=WorldRankBadge__Number]')[0].next)
+                    this_players = ([x.text for x in team.select("span[class*=PlayerBadgeHead]")] +
+                                    [x.text for x in team.select("span[class*=PlayerBadgeTiny]")])
                     points.append(this_pt)
                     teamname.append(this_name)
                     rank.append(this_rank)
-                except TypeError as e:  # TODO this currently only happens for team with 0.5 points
+                    players.append(this_players)
+                except TypeError as e:
                     print('Not succeeded: ', team, e)
-            ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i]} for i in range(len(points))]  # TODO: refactor, but first try to see if it works
+            ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i], 'players': players[i]}
+                       for i in range(len(points))]  # TODO: refactor, but first try to see if it works
 
         self.close()
         return ranking
