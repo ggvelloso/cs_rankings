@@ -74,10 +74,14 @@ class HLTVRankings(CSRankingsClient):
                     .text.strip()[1:-1]
                     .split(" ")[0]
                 )
+                players = ([x.text for x in
+                            team.find("div", {"class": "playersLine"})
+                            .find_all("span")])
                 ranking_item = {
                     "position": int(position),
                     "name": name,
                     "points": int(points),
+                    "players": players
                 }
                 ranking.append(ranking_item)
 
