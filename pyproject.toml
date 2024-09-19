@@ -1,18 +1,17 @@
 [project]
-name = "hltv-data"
-version = "0.3.0"
+name = "cs-rankings"
+version = "0.1.0"
 authors = [
-  { name="Dariusz Choruzy", email="dariusz.choruzy@gmail.com" },
+  { name="Bert de Bruijn", email="lpdebruijn@gmail.com" },
 ]
 dependencies = [
     "beautifulsoup4",
-    "soupsieve",
-    "requests",
+    "selenium"
 ]
-description = "HLTV.org data"
+description = "Pull competitive Counterstrike rankings from HLTV.org, ESL and Valve."
 readme = "README.md"
 license = { file="LICENCE" }
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -20,8 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/dchoruzy/hltv-data"
-"Bug Tracker" = "https://github.com/dchoruzy/hltv-data/issues"
+# "Homepage" = "https://github.com/.."
+# "Bug Tracker" = "https://github.com/.."
 
 [build-system]
 requires = ["hatchling"]

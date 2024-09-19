@@ -1,148 +1,81 @@
-<h1 align="center">Welcome to hltv-data 👋 🎮</h1>
-<p>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.4.0-blue.svg?cacheSeconds=2592000" />
-  <a href="#" target="_blank">
-    <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
-  </a>
-</p>
+# CS rankings - WIP
 
-> Data from popular Counter-Strike website hltv.org
+> Pull competitive Counterstrike rankings from HLTV.org, ESL and Valve.
 
-## Install
+This is done using a Selenium-based webview for HLTV.org and ESL, and using a clone of the git repository for the Valve
+rankings.
 
-```sh
-pip install hltv-data
-```
+Note that this is still a WORK IN PROGRESS.
+
+[//]: # (## Install)
+
+[//]: # ()
+[//]: # (```sh)
+
+[//]: # (pip install hltv-data)
+
+[//]: # (```)
 
 ## Usage
 
-The public methods can be reached using ```HLTVClient```
-```sh
-from hltv_data import HLTVClient
+The public methods can be reached by importing from `cs_rankings`.
+```python
+from cs_rankings import HLTVRankings, ESLRankings, ValveLiveRankings, ValveRankings, ValveInvitationRankings
 
-hltv_client = HLTVClient()
-
+client = ValveRankings()  # or one of the others
+ranking = client.get_ranking()
+client.close()
 ```
 
-#### Current ranking
-```sh
-hltv_client.get_ranking()
+The variable `ranking` will be a list of dictionaries for each rank. The dictionaries contain key, value pairs for 
+`position`, `name`, `points` and `players`.
+
+You can easily convert them to, say, a pandas DataFrame using `pd.DataFrame(ranking)`.
+
+
+## Details on the rankings
+There are five Rankings classes available, three that are based on Selenium-based webviews and two based on the git
+approach. Note that for the git-based rankings you will need to have git installed beforehand.
+
+Selenium-based:
+- HLTVRankings
+- ValveLiveRankings (the Valve rankings as live calculated by HLTV)
+- ESLRankings
+
+Git-based:
+- ValveRankings (the official ones on the Valve own git)
+- ValveInvitationRankings (the official ones used for invitations)
+
+### Additional options
+For the git-based rankings, the init call supports two extra arguments:
+```python
+from cs_rankings import ValveRankings
+
+client = ValveRankings(assume_git=True, keep_repository=True)
 ```
+Both are False by default. If `assume_git` is set to True, there will be no check on whether Git is installed. If 
+`keep_repository` is set to True, the Valve git repository will not be removed afterwards, which allows for quick reuse.
 
-```sh
-Response:
+For all rankings (git-based or selenium-based), the `get_ranking()` method supports four extra arguments:
+```python
+from cs_rankings import HLTVRankings
 
-[
-    {"position": 1, "name": "Natus Vincere", "points": 1000},
-    {"position": 2, "name": "Gambit", "points": 822},
-    {"position": 3, "name": "G2", "points": 629},
-    {"position": 4, "name": "FaZe", "points": 409},
-    {"position": 5, "name": "Virtus.pro", "points": 362},
-    {"position": 6, "name": "Astralis", "points": 346},
-    {"position": 7, "name": "Heroic", "points": 333},
-    {"position": 8, "name": "NIP", "points": 287},
-    {"position": 9, "name": "Vitality", "points": 282},
-    {"position": 10, "name": "OG", "points": 241},
-    {"position": 11, "name": "BIG", "points": 239},
-    {"position": 12, "name": "Spirit", "points": 231},
-    {"position": 13, "name": "Liquid", "points": 196},
-    {"position": 14, "name": "mousesports", "points": 183},
-    {"position": 15, "name": "forZe", "points": 179},
-    {"position": 16, "name": "FURIA", "points": 176},
-    {"position": 17, "name": "Complexity", "points": 164},
-    {"position": 18, "name": "Entropiq", "points": 151},
-    {"position": 19, "name": "Sinners", "points": 102},
-    {"position": 20, "name": "ENCE", "points": 100},
-    {"position": 21, "name": "Renegades", "points": 94},
-    {"position": 22, "name": "SKADE", "points": 94},
-    {"position": 23, "name": "AGO", "points": 89},
-    {"position": 24, "name": "K23", "points": 82},
-    {"position": 25, "name": "Extra Salt", "points": 79},
-    {"position": 26, "name": "Endpoint", "points": 77},
-    {"position": 27, "name": "Copenhagen Flames", "points": 76},
-    {"position": 28, "name": "Evil Geniuses", "points": 71},
-    {"position": 29, "name": "FunPlus Phoenix", "points": 60},
-    {"position": 30, "name": "DBL PONEY", "points": 58},
-]
+client = HLTVRankings()
+ranking = client.get_ranking(region='asia', date='2024/september/2', min_points=10, max_rank=30)
 ```
+By default, the most recent global ranking is pulled without filtering by points or maximum rank. Note that supported
+regions for the HLTV and Valve rankings are differently formatted.
 
+Note: it is not possible to use the `region` or `date` inputs for the ESLRanking only. The ESLRanking does support the point
+or ranking based filter.
 
-#### Matches
-```sh
-hltv_client.get_matches()
-```
+## Inspiration & credits
+This project is based on the [hltv-data](https://github.com/dchoruzy/hltv-data) project by 
+[@dchoruzy](https://github.com/dchoruzy). That project aims to pull rankings, matches and results from the HLTV website.
+This project is a fork and rework of `hltv-data`'s main class.
 
-```sh
-Response:
+Compared to `hltv-data`, this project is more narrow since it focuses on rankings only, but it is wider since it can 
+pull more detailed rankings and from multiple sources.
 
-[
-    {
-        "event": "ESL Pro League Season 16",
-        "date": "2022-09-10T16:00:00",
-        "team_1": "Outsiders",
-        "team_2": "MIBR",
-        "star_rating": 1
-    },
-    {
-        "event": "ESL Pro League Season 16",
-        "date": "2022-09-10T19:30:00",
-        "team_1": "FaZe",
-        "team_2": "G2",
-        "star_rating": 3
-    },
-    ...
-]
-```
-
-
-#### Results
-```sh
-hltv_client.get_results()
-```
-
-```sh
-Response:
-
-[
-    {
-        "event": "ESL Pro League Season 14",
-        "team_1": {
-            "name": "Vitality",
-            "result": 2
-        },
-        "team_2": {
-            "name": "Natus Vincere",
-            "result": 3
-        }
-    },
-    {
-        "event": "Fragadelphia 15",
-        "team_1": {
-            "name": "Third Impact",
-            "result": 1
-        },
-        "team_2": {
-            "name": "Coldest Riders",
-            "result": 2
-        }
-    },
-    ...
-]
-```
-
-
-## Author
-
-👤 **Dariusz Choruzy**
-
-* Website: http://choruzy.com/
-* Github: [@dchoruzy](https://github.com/dchoruzy)
-* LinkedIn: [@dchoruzy](https://www.linkedin.com/in/dchoruzy/)
-
-## 🤝 Contributing
-
-Contributions, issues and feature requests are welcome!<br />Feel free to check [issues page](https://github.com/dchoruzy/hltv-data/issues). 
-
-## Show your support
-
-Give a ⭐️ if this project helped you!
+## Contributing
+Contributions, issues and feature requests are welcome!
