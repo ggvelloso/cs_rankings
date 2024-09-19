@@ -1,10 +1,17 @@
 import abc
 import os
 import shutil
+import datetime
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+
+
+month_mapping = {'january': '01', 'february': '02', 'march': '03', 'april': '04', 'may': '05', 'june': '06',
+                 'july': '07', 'august': '08', 'september': '09', 'october': '10', 'november': '11',
+                 'december': '12'}
+rev_month_mapping = {v: k for k,v in month_mapping.items()}
 
 
 class CSRankings(abc.ABC):
@@ -13,6 +20,43 @@ class CSRankings(abc.ABC):
     def get_ranking(self):
         pass
 
+    def _convert_date(self, date, style=None):
+        # Convert input dates to needed date format for Valve or HLTV pulls (ESL does not allow old rankings by URL)
+        # You can plug in either format or YYYYMMDD / YYYY-MM-DD formats for compatibility, or a datetime date(time).
+        if type(date) == datetime.datetime:
+            date = str(date.date())
+        elif type(date) == datetime.date:
+            date = str(date)
+
+        if len(date) == 10 and date.count('_') == 2:
+            year, month, day = date.split('_')
+        elif len(date) == 10 and date.count('-') == 2:
+            year, month, day = date.split('-')
+        elif len(date) == 8 and not any(x in date for x in '-/_'):
+            year, month, day = date[:4], date[4:6], date[6:]
+        elif date.count('/') == 2:
+            year, day = date.split('/')[0], date.split('/')[2].zfill(2)
+            month_mapping = {'january': '01', 'february': '02', 'march': '03', 'april': '04', 'may': '05', 'june': '06',
+                             'july': '07', 'august': '08', 'september': '09', 'october': '10', 'november': '11',
+                             'december': '12'}
+            month = month_mapping[date.split('/')[1]]
+        else:
+            raise ValueError(f'Date input {date} does not meet standards: YYYYMMDD or YYYY_MM_DD or YYYY-MM-DD or '
+                             f'YYYY/month/D.')
+        try:
+            assert len(year) == 4
+            assert len(month) == 2
+            assert len(day) == 2
+        except AssertionError:
+            raise ValueError(f'Date input {date} does not meet standards: YYYYMMDD or YYYY_MM_DD or YYYY-MM-DD or '
+                             f'YYYY/month/D.')
+
+        if style == 'hltv':
+            return year + '/' + rev_month_mapping[month] + '/' + str(int(day))
+        if style == 'valve':
+            return year + '_' + month + '_' + day
+        else:
+            return year + '-' + month + '-' + day
 
 class CSRankingsClient(CSRankings, abc.ABC):
     def __init__(self):
@@ -58,11 +102,15 @@ class HLTVRankings(CSRankingsClient):
     def __init__(self):
         super().__init__()
         BASE_URL = "https://www.hltv.org"
-        self.ranking_url = f"{BASE_URL}/ranking/teams"
+        self.ranking_url = f"{BASE_URL}/ranking/teams/"
 
-    def get_ranking(self):
+    def get_ranking(self, date=None):
+        # Process date input
+        date = self._convert_date(date, style='hltv') if date is not None else ''
+        this_ranking_url = self.ranking_url + date
+
         ranking = []
-        page_source = self._get_page_source(self.ranking_url)
+        page_source = self._get_page_source(this_ranking_url)
         if page_source:
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.find_all("div", {"class": "ranked-team"})
@@ -99,7 +147,7 @@ class ValveLiveRankings(HLTVRankings):
     def __init__(self):
         super().__init__()
         BASE_URL = "https://www.hltv.org"
-        self.ranking_url = f"{BASE_URL}/valve-ranking/teams"
+        self.ranking_url = f"{BASE_URL}/valve-ranking/teams/"
 
 
 class ESLRankings(CSRankingsClient):
@@ -162,15 +210,11 @@ class ValveRankings(CSRankings):
 
     def get_ranking(self, region='global', date=None):
         # Parsing inputs
-        if date is not None:
-            if not (len(date) == 10 and date[4] == date[7] == '_'):
-                raise ValueError(f"date input should be of form YYYY_MM_DD, not {date}")
-        date = date if date is not None else ""
+        date = self._convert_date(date, style='valve') if date is not None else ''
         if region in ['global', 'europe', 'asia', 'americas']:
             region = region
         else:
             raise ValueError(f"Region input should be one of 'global', 'europe', 'asia', 'americas'; you used {region}.")
-
 
         # Clone valve regional standings into tmp/ and find file containing selected rankings
         os.makedirs('tmp/', exist_ok=True)
