@@ -20,6 +20,10 @@ class CSRankings(abc.ABC):
     def get_ranking(self):
         pass
 
+    @abc.abstractmethod
+    def close(self):
+        pass
+
     def _convert_date(self, date, style=None):
         # Convert input dates to needed date format for Valve or HLTV pulls (ESL does not allow old rankings by URL)
         # You can plug in either format or YYYYMMDD / YYYY-MM-DD formats for compatibility, or a datetime date(time).
@@ -36,9 +40,6 @@ class CSRankings(abc.ABC):
             year, month, day = date[:4], date[4:6], date[6:]
         elif date.count('/') == 2:
             year, day = date.split('/')[0], date.split('/')[2].zfill(2)
-            month_mapping = {'january': '01', 'february': '02', 'march': '03', 'april': '04', 'may': '05', 'june': '06',
-                             'july': '07', 'august': '08', 'september': '09', 'october': '10', 'november': '11',
-                             'december': '12'}
             month = month_mapping[date.split('/')[1]]
         else:
             raise ValueError(f'Date input {date} does not meet standards: YYYYMMDD or YYYY_MM_DD or YYYY-MM-DD or '
@@ -63,6 +64,7 @@ class CSRankings(abc.ABC):
             return year + '_' + month + '_' + day
         else:
             return year + '-' + month + '-' + day
+
 
 class CSRankingsClient(CSRankings, abc.ABC):
     def __init__(self):
@@ -115,8 +117,9 @@ class HLTVRankings(CSRankingsClient):
         # Process date/region input - for now assume user will supply an allowed region
         date = self._convert_date(date, style='hltv') if date is not None else ''
         this_ranking_url = self.ranking_url + date
-        region = None if region == 'global' else region.capitalize()
-        this_ranking_url += f'/{self.region_string}/{region}'
+        region = None if region in ['global', None] else region.capitalize()
+        this_ranking_url += f'/{self.region_string}/{region}' if region is not None else ''
+        print(this_ranking_url)
 
         ranking = []
         page_source = self._get_page_source(this_ranking_url)
@@ -149,7 +152,6 @@ class HLTVRankings(CSRankingsClient):
                 }
                 ranking.append(ranking_item)
 
-        self.close()  # TODO experiment with moving in get_page_source
         return ranking
 
 
@@ -203,17 +205,16 @@ class ESLRankings(CSRankingsClient):
             ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i], 'players': players[i]}
                        for i in range(len(points))]  # TODO: refactor, but first try to see if it works
 
-        self.close()
         return ranking
 
 
 class ValveRankings(CSRankings):
+    valve_ranking_folder = 'live'
 
     def __init__(self, assume_git=False, keep_repository=False):
         super().__init__()
         self.curr_year = 2024  # TODO: pull this from today but can go wrong on jan 1st when there is no 2025 ranking yet
         self.keep_repository = keep_repository
-        self.valve_ranking_folder = 'live'
 
         if not assume_git:
             print('Checking git version to see if git is installed (can suppress with assume_git=True input)')
@@ -221,14 +222,6 @@ class ValveRankings(CSRankings):
             if error_code != 0:
                 raise SystemError("Git seems to not be installed on your system, which is required for ValveRankings."
                                   "Consider installing Git, or use ValveLiveRankings for the HLTV implementation.")
-
-    def get_ranking(self, region='global', date=None, min_points=0, max_rank=None):
-        # Parsing inputs
-        date = self._convert_date(date, style='valve') if date is not None else ''
-        if region in ['global', 'europe', 'asia', 'americas']:
-            region = region
-        else:
-            raise ValueError(f"Region input should be one of 'global', 'europe', 'asia', 'americas'; you used {region}.")
 
         # Clone valve regional standings into tmp/ and find file containing selected rankings
         os.makedirs('tmp/', exist_ok=True)
@@ -240,6 +233,15 @@ class ValveRankings(CSRankings):
         else:
             os.system('git clone git@github.com:ValveSoftware/counter-strike_regional_standings.git')
             os.chdir(f'counter-strike_regional_standings/{self.valve_ranking_folder}/{self.curr_year}/')
+
+    def get_ranking(self, region='global', date=None, min_points=0, max_rank=None):
+        # Parsing inputs
+        date = self._convert_date(date, style='valve') if date is not None else ''
+        if region in ['global', 'europe', 'asia', 'americas']:
+            region = region
+        else:
+            raise ValueError(f"Region input should be one of 'global', 'europe', 'asia', 'americas'; you used {region}.")
+
         allowed_files = sorted([x for x in os.listdir() if region in x and date in x])
         if len(allowed_files) == 0:
             raise FileNotFoundError(f'No files can be found for {region} region and date={date}.')
@@ -249,13 +251,6 @@ class ValveRankings(CSRankings):
         # Read in selected rankings
         with open(most_recent_allowed_file, 'r') as f:
             valve_standings_md = f.read().splitlines()
-
-        # Remove cloned repo and (if it's empty) tmp/
-        os.chdir('../../../../')
-        if not self.keep_repository:
-            shutil.rmtree('tmp/counter-strike_regional_standings')
-            if len(os.listdir('tmp')) == 0:
-                os.removedirs('tmp')
 
         # Process the standings to something workable, and save it
         rank, points, teamname, players = [], [], [], []
@@ -273,9 +268,17 @@ class ValveRankings(CSRankings):
 
         return ranking
 
+    def close(self):
+        os.chdir('../../../../')
+        # Remove cloned repo and (if it's empty) tmp/
+        if not self.keep_repository:
+            shutil.rmtree('tmp/counter-strike_regional_standings')
+            if len(os.listdir('tmp')) == 0:
+                os.removedirs('tmp')
+
 
 class ValveInvitationRankings(ValveRankings):
+    valve_ranking_folder = 'invitation'
 
     def __init__(self, assume_git=False, keep_repository=False):
         super().__init__(assume_git=assume_git, keep_repository=keep_repository)
-        self.valve_ranking_folder = 'invitation'
