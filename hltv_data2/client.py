@@ -51,6 +51,12 @@ class CSRankings(abc.ABC):
             raise ValueError(f'Date input {date} does not meet standards: YYYYMMDD or YYYY_MM_DD or YYYY-MM-DD or '
                              f'YYYY/month/D.')
 
+        # Output style formatting: HLTV, Valve, or generic datetime-like
+        if style is None:
+            if isinstance(self, HLTVRankings):
+                style = 'hltv'
+            if isinstance(self, ValveRankings):
+                style = 'valve'
         if style == 'hltv':
             return year + '/' + rev_month_mapping[month] + '/' + str(int(day))
         if style == 'valve':
