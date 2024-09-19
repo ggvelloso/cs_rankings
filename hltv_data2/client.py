@@ -147,19 +147,12 @@ class ESLRankings(CSRankingsClient):
 
 class ValveRankings(CSRankings):
 
-    def __init__(self, assume_git=False, keep_repository=False, region='global', date=None):
+    def __init__(self, assume_git=False, keep_repository=False):
         super().__init__()
         self.curr_year = 2024  # TODO: pull this from today but can go wrong on jan 1st when there is no 2025 ranking yet
         self.keep_repository = keep_repository
         self.valve_ranking_folder = 'live'
-        if date is not None:
-            if not (len(date) == 10 and date[4] == date[7] == '_'):
-                raise ValueError(f"date input should be of form YYYY_MM_DD, not {date}")
-        self.date = date if date is not None else ""
-        if region in ['global', 'europe', 'asia', 'americas']:
-            self.region = region
-        else:
-            raise ValueError(f"Region input should be one of 'global', 'europe', 'asia', 'americas'; you used {region}.")
+
         if not assume_git:
             print('Checking git version to see if git is installed (can suppress with assume_git=True input)')
             error_code = os.system('git --version')
@@ -167,7 +160,18 @@ class ValveRankings(CSRankings):
                 raise SystemError("Git seems to not be installed on your system, which is required for ValveRankings."
                                   "Consider installing Git, or use ValveLiveRankings for the HLTV implementation.")
 
-    def get_ranking(self):
+    def get_ranking(self, region='global', date=None):
+        # Parsing inputs
+        if date is not None:
+            if not (len(date) == 10 and date[4] == date[7] == '_'):
+                raise ValueError(f"date input should be of form YYYY_MM_DD, not {date}")
+        date = date if date is not None else ""
+        if region in ['global', 'europe', 'asia', 'americas']:
+            region = region
+        else:
+            raise ValueError(f"Region input should be one of 'global', 'europe', 'asia', 'americas'; you used {region}.")
+
+
         # Clone valve regional standings into tmp/ and find file containing selected rankings
         os.makedirs('tmp/', exist_ok=True)
         os.chdir('tmp/')
@@ -178,9 +182,9 @@ class ValveRankings(CSRankings):
         else:
             os.system('git clone git@github.com:ValveSoftware/counter-strike_regional_standings.git')
             os.chdir(f'counter-strike_regional_standings/{self.valve_ranking_folder}/{self.curr_year}/')
-        allowed_files = sorted([x for x in os.listdir() if self.region in x and self.date in x])
+        allowed_files = sorted([x for x in os.listdir() if region in x and date in x])
         if len(allowed_files) == 0:
-            raise FileNotFoundError(f'No files can be found for {self.region} region and date={self.date}.')
+            raise FileNotFoundError(f'No files can be found for {region} region and date={date}.')
         most_recent_allowed_file = allowed_files[-1]
         print(f"Importing valve rankings from {most_recent_allowed_file}.")
 
@@ -212,6 +216,6 @@ class ValveRankings(CSRankings):
 
 class ValveInvitationRankings(ValveRankings):
 
-    def __init__(self, assume_git=False, keep_repository=False, region='global', date=None):
-        super().__init__(assume_git=assume_git, keep_repository=keep_repository, region=region, date=date)
+    def __init__(self, assume_git=False, keep_repository=False):
+        super().__init__(assume_git=assume_git, keep_repository=keep_repository)
         self.valve_ranking_folder = 'invitation'
