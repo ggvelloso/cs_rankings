@@ -111,7 +111,7 @@ class HLTVRankings(CSRankingsClient):
         self.ranking_url = f"{BASE_URL}/ranking/teams/"
         self.region_string = 'country'
 
-    def get_ranking(self, date=None, region=None):
+    def get_ranking(self, date=None, region=None, min_points=0, max_rank=None):
         # Process date/region input - for now assume user will supply an allowed region
         date = self._convert_date(date, style='hltv') if date is not None else ''
         this_ranking_url = self.ranking_url + date
@@ -123,7 +123,7 @@ class HLTVRankings(CSRankingsClient):
         if page_source:
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.find_all("div", {"class": "ranked-team"})
-            for team in teams:
+            for team in teams[:max_rank]:
                 position = team.find("span", {"class": "position"}).text.strip()[1:]
                 name = (
                     team.find("div", {"class": "teamLine"})
@@ -139,6 +139,8 @@ class HLTVRankings(CSRankingsClient):
                 players = ([x.text for x in
                             team.find("div", {"class": "playersLine"})
                             .find_all("span")])
+                if int(points) < min_points:
+                    break  # No future teams would have more points, so can break the for-loop
                 ranking_item = {
                     "position": int(position),
                     "name": name,
@@ -167,7 +169,7 @@ class ESLRankings(CSRankingsClient):
         self.ranking_url = "https://pro.eslgaming.com/worldranking/csgo/rankings/"
         self.round_half_down = round_half_down  # For the lowest ranked teams, if True, report 0 points; if not, "<0.5"
 
-    def get_ranking(self, explicit_wait=False):
+    def get_ranking(self, explicit_wait=False, min_points=0, max_rank=None):
         ranking = []
         page_source = self._get_page_source(self.ranking_url, explicit_wait=explicit_wait)
 
@@ -175,9 +177,9 @@ class ESLRankings(CSRankingsClient):
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.select("div[class*=RankingsTeamItem__Row-]")
             if len(teams) == 0 and not explicit_wait:
-                return self.get_ranking(explicit_wait=True)
+                return self.get_ranking(explicit_wait=True, min_points=min_points, max_rank=max_rank)
             rank, points, teamname, players = [], [], [], []
-            for team in teams:
+            for team in teams[:max_rank]:
                 try:  # First pull all numbers; in case of no error, add them all to the running lists
                     try:
                         this_pt = int(team.select('div[class*=Points]')[0].find("span").next.strip())
@@ -186,6 +188,8 @@ class ESLRankings(CSRankingsClient):
                             this_pt = 0
                         else:
                             this_pt = team.select('div[class*=Points]')[0].find("span").text.split()[0]
+                    if this_pt < min_points:
+                        break
                     this_name = str(team.select('div[class*=TeamName]')[0].select('a[class]')[0].next)
                     this_rank = int(team.select('span[class*=WorldRankBadge__Number]')[0].next)
                     this_players = ([x.text for x in team.select("span[class*=PlayerBadgeHead]")] +
@@ -218,7 +222,7 @@ class ValveRankings(CSRankings):
                 raise SystemError("Git seems to not be installed on your system, which is required for ValveRankings."
                                   "Consider installing Git, or use ValveLiveRankings for the HLTV implementation.")
 
-    def get_ranking(self, region='global', date=None):
+    def get_ranking(self, region='global', date=None, min_points=0, max_rank=None):
         # Parsing inputs
         date = self._convert_date(date, style='valve') if date is not None else ''
         if region in ['global', 'europe', 'asia', 'americas']:
@@ -255,8 +259,10 @@ class ValveRankings(CSRankings):
 
         # Process the standings to something workable, and save it
         rank, points, teamname, players = [], [], [], []
-        for row in valve_standings_md[5:-4]:
+        for row in valve_standings_md[5:-4][:max_rank]:
             row = [x.strip() for x in row.split('|')][1:5]
+            if int(row[1]) < min_points:
+                break
             rank.append(int(row[0]))
             points.append(int(row[1]))
             teamname.append(row[2])
