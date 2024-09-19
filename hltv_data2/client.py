@@ -1,11 +1,20 @@
 import abc
+import os
+import shutil
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 
-class CSRankingsClient(abc.ABC):
+class CSRankings(abc.ABC):
+
+    @abc.abstractmethod
+    def get_ranking(self):
+        pass
+
+
+class CSRankingsClient(CSRankings, abc.ABC):
     def __init__(self):
         options = self._get_default_options()
         self.driver = webdriver.Chrome(options=options)
@@ -39,10 +48,6 @@ class CSRankingsClient(abc.ABC):
                 return None
             print(f"Retrying... ({nr_retries-1} left)")
             return self._get_page_source(url, nr_retries=nr_retries-1)
-
-    @abc.abstractmethod
-    def get_ranking(self):
-        pass
 
     def close(self):
         self.driver.quit()
@@ -138,3 +143,64 @@ class ESLRankings(CSRankingsClient):
 
         self.close()
         return ranking
+
+
+class ValveRankings(CSRankings):
+
+    def __init__(self, assume_git=False, keep_repository=False):
+        super().__init__()
+        self.curr_year = 2024  # TODO: pull this from today but can go wrong on jan 1st when there is no 2025 ranking yet
+        self.keep_repository = keep_repository
+        self.valve_ranking_folder = 'live'
+        if not assume_git:
+            print('Checking git version to see if git is installed (can suppress with assume_git=True input)')
+            error_code = os.system('git --version')
+            if error_code != 0:
+                raise SystemError("Git seems to not be installed on your system, which is required for ValveRankings."
+                                  "Consider installing Git, or use ValveLiveRankings for the HLTV implementation.")
+
+    def get_ranking(self):
+        # Clone valve regional standings into tmp/ and find file containing global rankings
+        os.makedirs('tmp/', exist_ok=True)
+        os.chdir('tmp/')
+        if 'counter-strike_regional_standings' in os.listdir():  # In case you have previously kept the repository
+            os.chdir('counter-strike_regional_standings')
+            os.system('git pull')
+            os.chdir(f'{self.valve_ranking_folder}/{self.curr_year}/')
+        else:
+            os.system('git clone git@github.com:ValveSoftware/counter-strike_regional_standings.git')
+            os.chdir(f'counter-strike_regional_standings/{self.valve_ranking_folder}/{self.curr_year}/')
+        global_file = sorted([x for x in os.listdir() if 'global' in x])[-1]
+        print(f"Importing valve rankings from {global_file}.")
+
+        # Read in global rankings
+        with open(global_file, 'r') as f:
+            valve_standings_md = f.read().splitlines()
+
+        # Remove cloned repo and (if it's empty) tmp/
+        os.chdir('../../../../')
+        if not self.keep_repository:
+            shutil.rmtree('tmp/counter-strike_regional_standings')
+            if len(os.listdir('tmp')) == 0:
+                os.removedirs('tmp')
+
+        # Process the standings to something workable, and save it
+        rank, points, teamname, players = [], [], [], []
+        for row in valve_standings_md[5:-4]:
+            row = [x.strip() for x in row.split('|')][1:5]
+            rank.append(int(row[0]))
+            points.append(int(row[1]))
+            teamname.append(row[2])
+            players.append(row[3].split(', '))
+
+        ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i], 'players': players[i]}
+                   for i in range(len(points))]  # TODO: refactor, but first try to see if it works
+
+        return ranking
+
+
+class ValveInvitationRankings(ValveRankings):
+
+    def __init__(self, assume_git=False, keep_repository=False):
+        super().__init__(assume_git=assume_git, keep_repository=keep_repository)
+        self.valve_ranking_folder = 'invitation'
