@@ -103,11 +103,14 @@ class HLTVRankings(CSRankingsClient):
         super().__init__()
         BASE_URL = "https://www.hltv.org"
         self.ranking_url = f"{BASE_URL}/ranking/teams/"
+        self.region_string = 'country'
 
-    def get_ranking(self, date=None):
-        # Process date input
+    def get_ranking(self, date=None, region=None):
+        # Process date/region input - for now assume user will supply an allowed region
         date = self._convert_date(date, style='hltv') if date is not None else ''
         this_ranking_url = self.ranking_url + date
+        region = None if region == 'global' else region.capitalize()
+        this_ranking_url += f'/{self.region_string}/{region}'
 
         ranking = []
         page_source = self._get_page_source(this_ranking_url)
@@ -148,6 +151,7 @@ class ValveLiveRankings(HLTVRankings):
         super().__init__()
         BASE_URL = "https://www.hltv.org"
         self.ranking_url = f"{BASE_URL}/valve-ranking/teams/"
+        self.region_string = 'region'
 
 
 class ESLRankings(CSRankingsClient):
