@@ -1,4 +1,4 @@
-from hltv_data2 import ValveLiveRankings, HLTVRankings, ESLRankings, ValveRankings, ValveInvitationRankings
+from cs_rankings import ValveLiveRankings, HLTVRankings, ESLRankings, ValveRankings, ValveInvitationRankings
 
 # Important note: don't run this more than needed to avoid unneeded traffic on the websites.
 

@@ -87,3 +87,7 @@ venv.bak/
 .idea/
 test/
 __venv/
+
+# Project specific setup
+local/
+examples/tmp/
