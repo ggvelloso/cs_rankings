@@ -19,8 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-# "Homepage" = "https://github.com/.."
-# "Bug Tracker" = "https://github.com/.."
+"Homepage" = "https://github.com/debruijn/cs_rankings"
+"Bug Tracker" = "https://github.com/debruijn/cs_rankings/issues"
 
 [build-system]
 requires = ["hatchling"]
