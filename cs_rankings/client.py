@@ -76,12 +76,12 @@ class CSRankingsClient(CSRankings, abc.ABC):
     def _get_default_options():
         options = Options()
         options.add_argument("--disable-search-engine-choice-screen")
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument(
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/79.0.3945.130 Safari/537.36")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        options.headless = False
+        options.add_argument("--headless=new")
         return options
 
     def _get_page_source(self, url, nr_retries=1, explicit_wait=True):
@@ -231,7 +231,7 @@ class ValveRankings(CSRankings):
             os.system('git pull')
             os.chdir(f'{self.valve_ranking_folder}/{self.curr_year}/')
         else:
-            os.system('git clone git@github.com:ValveSoftware/counter-strike_regional_standings.git')
+            os.system('git clone https://github.com/ValveSoftware/counter-strike_regional_standings.git')
             os.chdir(f'counter-strike_regional_standings/{self.valve_ranking_folder}/{self.curr_year}/')
 
     def get_ranking(self, region='global', date=None, min_points=0, max_rank=None):
