@@ -67,9 +67,12 @@ class CSRankings(abc.ABC):
 
 
 class CSRankingsClient(CSRankings, abc.ABC):
-    def __init__(self):
-        options = self._get_default_options()
-        self.driver = webdriver.Chrome(options=options)
+    def __init__(self, driver=None, in_container=False):
+        if driver is None:
+            options = self._get_default_options() if not in_container else self._get_container_options()
+            self.driver = webdriver.Chrome(options=options)
+        else:
+            self.driver=driver
         self.ranking_url = ""
 
     @staticmethod
@@ -82,6 +85,12 @@ class CSRankingsClient(CSRankings, abc.ABC):
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
         options.add_argument("--headless=new")
+        return options
+
+    def _get_container_options(self):
+        options = self._get_default_options()
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--no-sandbox")
         return options
 
     def _get_page_source(self, url, nr_retries=1, explicit_wait=True):
@@ -107,8 +116,8 @@ class CSRankingsClient(CSRankings, abc.ABC):
 
 class HLTVRankings(CSRankingsClient):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, driver=None, in_container=False):
+        super().__init__(driver=driver, in_container=in_container)
         BASE_URL = "https://www.hltv.org"
         self.ranking_url = f"{BASE_URL}/ranking/teams/"
         self.region_string = 'country'
@@ -157,8 +166,8 @@ class HLTVRankings(CSRankingsClient):
 
 class ValveLiveRankings(HLTVRankings):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, driver=None, in_container=False):
+        super().__init__(driver=driver, in_container=in_container)
         BASE_URL = "https://www.hltv.org"
         self.ranking_url = f"{BASE_URL}/valve-ranking/teams/"
         self.region_string = 'region'
@@ -166,8 +175,8 @@ class ValveLiveRankings(HLTVRankings):
 
 class ESLRankings(CSRankingsClient):
 
-    def __init__(self, round_half_down=True):
-        super().__init__()
+    def __init__(self, driver=None, round_half_down=True, in_container=False):
+        super().__init__(driver=driver, in_container=in_container)
         self.ranking_url = "https://pro.eslgaming.com/worldranking/csgo/rankings/"
         self.round_half_down = round_half_down  # For the lowest ranked teams, if True, report 0 points; if not, "<0.5"
 
