@@ -1,11 +1,9 @@
-# CS rankings - WIP
+# CS rankings
 
 > Pull competitive Counterstrike rankings from HLTV.org, ESL and Valve.
 
 This is done using a Selenium-based webview for HLTV.org and ESL, and using a clone of the git repository for the Valve
-rankings.
-
-Note that this is still a WORK IN PROGRESS.
+rankings. Valve rankings can also be pulled from HLTV, see below.
 
 [//]: # (## Install)
 
@@ -47,6 +45,17 @@ Git-based:
 - ValveInvitationRankings (the official ones used for invitations)
 
 ### Additional options
+For the selenium-based rankings, the init call supports two extra arguments:
+```python
+from cs_rankings import HLTVRankings
+
+client = HLTVRankings(driver=None, in_container=False)
+```
+The driver input can be used to initialize your own `selenium.webdriver.Chrome()` driver (or in theory a non-Chrome
+driver, but that is not tested) with your own settings (such as specific `selenium.webdriver.chrome.options.Options` you
+might need). If not supplied, a default set of options will be supplied. If `in_container` is set to True, the default
+options are extended to make them work in Docker containers.
+
 For the git-based rankings, the init call supports two extra arguments:
 ```python
 from cs_rankings import ValveRankings
