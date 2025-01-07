@@ -222,7 +222,7 @@ class ValveRankings(CSRankings):
 
     def __init__(self, assume_git=False, keep_repository=False):
         super().__init__()
-        self.curr_year = 2024  # TODO: pull this from today but can go wrong on jan 1st when there is no 2025 ranking yet
+        self.curr_year = 2025  # TODO: pull this from today but can go wrong on jan 1st when there is no 2026 ranking yet
         self.keep_repository = keep_repository
 
         if not assume_git:
