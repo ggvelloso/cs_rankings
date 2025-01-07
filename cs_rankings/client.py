@@ -220,9 +220,10 @@ class ESLRankings(CSRankingsClient):
 class ValveRankings(CSRankings):
     valve_ranking_folder = 'live'
 
-    def __init__(self, assume_git=False, keep_repository=False):
+    def __init__(self, assume_git=False, keep_repository=False, overwrite_year=None):
         super().__init__()
-        self.curr_year = 2025  # TODO: pull this from today but can go wrong on jan 1st when there is no 2026 ranking yet
+        # TODO: pull year from today but in case of error drop back (like on jan 1st when there is no ranking yet)
+        self.curr_year = 2025 if overwrite_year is None else overwrite_year
         self.keep_repository = keep_repository
 
         if not assume_git:
@@ -289,5 +290,5 @@ class ValveRankings(CSRankings):
 class ValveInvitationRankings(ValveRankings):
     valve_ranking_folder = 'invitation'
 
-    def __init__(self, assume_git=False, keep_repository=False):
-        super().__init__(assume_git=assume_git, keep_repository=keep_repository)
+    def __init__(self, assume_git=False, keep_repository=False, overwrite_year=None):
+        super().__init__(assume_git=assume_git, keep_repository=keep_repository, overwrite_year=overwrite_year)
