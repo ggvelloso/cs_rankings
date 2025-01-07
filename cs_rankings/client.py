@@ -214,7 +214,7 @@ class ESLRankings(CSRankingsClient):
                 except TypeError as e:
                     print('Not succeeded: ', team, e)
             ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i], 'players': players[i]}
-                       for i in range(len(points))]  # TODO: refactor, but first try to see if it works
+                       for i in range(len(points))]
 
         return ranking
 
@@ -276,7 +276,7 @@ class ValveRankings(CSRankings):
             players.append(row[3].split(', '))
 
         ranking = [{'position': rank[i], 'name': teamname[i], 'points': points[i], 'players': players[i]}
-                   for i in range(len(points))]  # TODO: refactor, but first try to see if it works
+                   for i in range(len(points))]
 
         return ranking
 
