@@ -133,6 +133,7 @@ class HLTVRankings(CSRankingsClient):
         ranking = []
         page_source = self._get_page_source(this_ranking_url)
         if page_source:
+            print(f"Importing rankings from {self.ranking_url}.")
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.find_all("div", {"class": "ranked-team"})
             for team in teams[:max_rank]:
@@ -185,6 +186,7 @@ class ESLRankings(CSRankingsClient):
         page_source = self._get_page_source(self.ranking_url, explicit_wait=explicit_wait)
 
         if page_source:
+            print(f"Importing ESL rankings from {self.ranking_url}.")
             soup = BeautifulSoup(page_source, "html.parser")
             teams = soup.select("div[class*=RankingsTeamItem__Row-]")
             if len(teams) == 0 and not explicit_wait:
@@ -256,7 +258,7 @@ class ValveRankings(CSRankings):
         if len(allowed_files) == 0:
             raise FileNotFoundError(f'No files can be found for {region} region and date={date}.')
         most_recent_allowed_file = allowed_files[-1]
-        print(f"Importing valve rankings from {most_recent_allowed_file}.")
+        print(f"Importing Valve rankings from {most_recent_allowed_file} on GitHub.")
 
         # Read in selected rankings
         with open(most_recent_allowed_file, 'r') as f:
