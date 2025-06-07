@@ -88,3 +88,4 @@ pull more detailed rankings and from multiple sources.
 
 ## Contributing
 Contributions, issues and feature requests are welcome!
+
